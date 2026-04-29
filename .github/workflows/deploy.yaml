@@ -1,0 +1,64 @@
+name: Build & Deploy
+on:
+  workflow_run:
+    workflows: [ "Release" ]
+    types: [ completed ]
+    branches: [ main ]
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: self-hosted
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get Latest Tag
+        id: vars
+        run: |
+          git fetch --tags
+          VERSION=$(git describe --tags $(git rev-list --tags --max-count=1))
+          echo "tag=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ vars.DOCKER_USERNAME }}/mlops:${{ steps.vars.outputs.tag }}
+
+      # as it runs on self host 
+      - name: Deploy Local Container
+        run: |
+          # 1. Login local
+          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ vars.DOCKER_USERNAME }}" --password-stdin
+
+          # 2. Pulling image
+          docker pull ${{ vars.DOCKER_USERNAME }}/mlops:${{ steps.vars.outputs.tag }}
+
+          # 3. remove old containers
+          docker stop wep-app || true
+          docker rm wep-app || true
+
+          # 4. run new container version
+          docker run -d --name wep-app -p 8501:8501 ${{ vars.DOCKER_USERNAME }}/mlops:${{ steps.vars.outputs.tag }}
+
+      - name: Health Check
+        run: |
+          sleep 10
+          STATUS=$(docker inspect -f '{{.State.Running}}' wep-app)
+          if [ "$STATUS" = "true" ]; then
+            echo "Container Running !!!"
+          else
+            echo "ERROR container stopped"
+            exit 1
+          fi
