@@ -1,0 +1,26 @@
+{
+    "name": "Binary Classification",
+    "version": "1.0.0",
+    "description": "Dashboard MLOps Binary Classification ",
+    "main": "src/app.py",
+    "scripts": {
+        "start": "streamlit run src/app.py",
+        "test": "pytest"
+    },
+    "keywords": [
+        "python",
+        "mlops"
+    ],
+    "author": "Jesus avila",
+    "license": "MIT",
+    "release": {
+        "branches": [
+            "main"
+        ],
+        "plugins": [
+            "@semantic-release/commit-analyzer",
+            "@semantic-release/release-notes-generator",
+            "@semantic-release/github"
+        ]
+    }
+}
