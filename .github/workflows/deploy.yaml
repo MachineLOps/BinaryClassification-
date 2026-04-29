@@ -34,7 +34,7 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ vars.DOCKER_USERNAME }}/mlops:${{ steps.vars.outputs.tag }}
+            ${{ vars.DOCKER_USERNAME }}/mlops:binary-${{ steps.vars.outputs.tag }}
 
       # as it runs on self host 
       - name: Deploy Local Container
@@ -43,19 +43,19 @@ jobs:
           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ vars.DOCKER_USERNAME }}" --password-stdin
 
           # 2. Pulling image
-          docker pull ${{ vars.DOCKER_USERNAME }}/mlops:${{ steps.vars.outputs.tag }}
+          docker pull ${{ vars.DOCKER_USERNAME }}/mlops:binary-${{ steps.vars.outputs.tag }}
 
           # 3. remove old containers
-          docker stop wep-app || true
-          docker rm wep-app || true
+          docker stop binary || true
+          docker rm binary || true
 
           # 4. run new container version
-          docker run -d --name wep-app -p 8501:8501 ${{ vars.DOCKER_USERNAME }}/mlops:${{ steps.vars.outputs.tag }}
+          docker run -d --name binary -p 8501:8501 ${{ vars.DOCKER_USERNAME }}/mlops:binary-${{ steps.vars.outputs.tag }}
 
       - name: Health Check
         run: |
           sleep 10
-          STATUS=$(docker inspect -f '{{.State.Running}}' wep-app)
+          STATUS=$(docker inspect -f '{{.State.Running}}' binary)
           if [ "$STATUS" = "true" ]; then
             echo "Container Running !!!"
           else
